@@ -10,6 +10,10 @@ from datetime import datetime
 import websocket
 import ssl
 
+# WebSocket URL Configuration - Change this to test different deployments
+WEBSOCKET_URL = "ws://localhost:8788/websocket"
+# For deployed worker, use: "wss://your-worker-name.your-subdomain.workers.dev/websocket"
+
 
 class WebSocketClient:
     def __init__(self, url):
@@ -199,17 +203,11 @@ class WebSocketClient:
 
 def main():
     """Main function"""
-    # Production URL - change to localhost:8788 for local development
-    url = "wss://durable-object-websocket.stuart-benji.workers.dev/websocket"
-    
-    # For local development, uncomment:
-    # url = "ws://localhost:8788/websocket"
-    
     print("=== Cloudflare Durable Object WebSocket Client ===")
-    print(f"Connecting to: {url}")
+    print(f"Connecting to: {WEBSOCKET_URL}")
     print("-" * 50)
     
-    client = WebSocketClient(url)
+    client = WebSocketClient(WEBSOCKET_URL)
     
     try:
         client.connect()

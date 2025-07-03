@@ -1,6 +1,31 @@
-# Cloudflare Durable Object WebSocket with Hibernation
+# Cloudflare Durable Object WebSocket Hibernation Bug Reproduction
 
-A complete implementation of Cloudflare Durable Objects with WebSocket hibernation, heartbeat system, and worker alarms for connection management.
+⚠️ **PRIMARY PURPOSE: This project isolates a critical bug in Cloudflare's WebSocket hibernation API** ⚠️
+
+## 🐛 Bug Summary
+This repository demonstrates that **WebSocket hibernation is currently broken** in **deployed** Cloudflare Durable Objects. While clients can send messages to hibernating Durable Objects, **the server cannot send responses back to clients**.
+
+**⚠️ Important**: This bug only occurs with **deployed workers**. Local development with `wrangler dev` works correctly.
+
+### What Works:
+- ✅ Initial connection and welcome messages
+- ✅ Client sending messages to server
+- ✅ Server receiving messages (logs confirm)
+- ✅ Local development (`wrangler dev`) works perfectly
+
+### What's Broken (Deployed Workers Only):
+- ❌ Server responses never reach clients (all timeout)
+- ❌ Ping/pong functionality broken
+- ❌ Heartbeat acknowledgments never arrive
+- ❌ Echo messages never arrive
+
+This makes **bidirectional WebSocket communication impossible** with hibernation in production deployments.
+
+---
+
+## Technical Implementation
+
+*Despite the hibernation bug, this project implements a complete WebSocket hibernation system with heartbeat and alarm functionality for testing and future use when the bug is fixed.*
 
 ## Features
 
@@ -20,10 +45,9 @@ A complete implementation of Cloudflare Durable Objects with WebSocket hibernati
 - Connection timeout management using alarms
 - Automatic connection closure for inactive clients
 
-### 🔧 Multiple Client Support
-- **Python Client**: Interactive terminal with automatic heartbeats
+### 🔧 Client Support
+- **Python Client**: Interactive terminal with automatic heartbeats (`client/websocket_client.py`)
 - **Web Client**: Browser-based interface with visual heartbeat indicators
-- **Test Scripts**: Automated hibernation and functionality testing
 
 ## Setup
 
@@ -49,7 +73,7 @@ cd ..
 npm run deploy
 ```
 
-### Test Hibernation Locally
+### Test Locally (Works Correctly)
 ```bash
 npm run dev  # In one terminal
 ```
@@ -57,25 +81,29 @@ npm run dev  # In one terminal
 ```bash
 cd client
 source .venv/bin/activate
-python test_hibernation.py  # In another terminal
+python websocket_client.py  # In another terminal
 ```
 
-### Interactive Python Client
+**Note**: Local testing with `wrangler dev` works perfectly and you'll see all responses.
+
+### Python Client
 ```bash
 cd client
 source .venv/bin/activate
 python websocket_client.py
 ```
 
-Commands:
+**Commands:**
 - Type any message to send
 - `ping` - Send manual ping
 - `quit` - Disconnect
 
-### Web Client
-Open `https://durable-object-websocket.stuart-benji.workers.dev` in your browser.
+**Configuration:** Edit `WEBSOCKET_URL` at the top of the file to test different deployments.
 
-Features:
+### Web Client
+Deploy with `npm run deploy` and open your worker URL in browser.
+
+**Features:**
 - Automatic heartbeats every 20 seconds
 - Visual message indicators
 - Manual ping button
@@ -134,22 +162,71 @@ Features:
 - `pong` - Ping response
 - `echo` - Message echo with connection info
 
-## Testing
+## 🧪 Bug Reproduction Tests
 
-Run the hibernation test to verify functionality:
-
+### Step 1: Test Locally (Should Work)
 ```bash
+# Terminal 1: Start local dev server
+npm run dev
+
+# Terminal 2: Test with local server
 cd client
 source .venv/bin/activate
-python test_hibernation.py
+python websocket_client.py
 ```
 
-This test:
-1. Establishes connection
-2. Sends initial messages
-3. Waits 30 seconds (hibernation period)
-4. Sends heartbeat to wake up
-5. Verifies post-hibernation functionality
+**Expected Result**: Everything works perfectly - you'll see ping responses, message echoes, and heartbeat acknowledgments.
+
+### Step 2: Test Deployed Worker (Shows Bug)
+```bash
+# Deploy to Cloudflare
+npm run deploy
+```
+
+1. Edit `client/websocket_client.py` and change `WEBSOCKET_URL` to your deployed worker URL:
+   ```python
+   WEBSOCKET_URL = "wss://your-worker-name.your-subdomain.workers.dev/websocket"
+   ```
+
+2. Run the client:
+   ```bash
+   cd client
+   source .venv/bin/activate
+   python websocket_client.py
+   ```
+
+**Bug Reproduction:**
+1. Type `ping` and press Enter
+2. Type any message and press Enter
+3. **Notice: No responses arrive** (connection shows successful, but server never responds)
+
+**What you'll see:**
+- ✅ Welcome message received 
+- ✅ Heartbeat system starts automatically
+- ✅ Messages sent successfully
+- ❌ **Zero responses from server** (despite server logs showing receipt)
+
+### Web Browser Test
+1. Open your deployed worker URL in browser
+2. Type any message and click "Send"
+3. Click "Ping" button
+4. **Notice: No responses appear** (despite messages being sent)
+
+### Comparison: Local vs Deployed
+- **Local (`wrangler dev`)**: ✅ All responses work perfectly
+- **Deployed**: ❌ No responses reach client (hibernation bug)
+
+## 📋 Bug Documentation for Cloudflare
+
+This repository includes detailed bug reports for Cloudflare's technical team:
+
+- **`CLOUDFLARE-BUG-REPORT.md`** - Executive summary of the hibernation bug
+- **`hibernation-bug-repro.md`** - Detailed technical reproduction steps  
+- **`src/working-version.ts`** - Working non-hibernation implementation
+- **`src/broken-hibernation.ts`** - Broken hibernation implementation showing the bug
+- **`client/websocket_client.py`** - Simple test client demonstrating the bug
+
+These files provide side-by-side comparisons and minimal reproduction cases to help Cloudflare engineers identify and fix the issue.
 
 ## Configuration
 
@@ -160,9 +237,9 @@ This test:
 
 ## Production Deployment
 
-The worker is deployed to: `https://durable-object-websocket.stuart-benji.workers.dev`
+Deploy your own worker with: `npm run deploy`
 
-Key benefits in production:
+Key benefits when hibernation works in production:
 - **Cost Efficiency**: Hibernated objects use no compute resources
 - **Scalability**: Thousands of idle connections with minimal overhead
 - **Reliability**: Connection state survives Durable Object restarts
