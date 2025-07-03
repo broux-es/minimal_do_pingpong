@@ -1,5 +1,7 @@
 # Logs
 *.log
+.vscode
+.editorconfig
 
 logs
 _.log
