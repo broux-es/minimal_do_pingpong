@@ -56,4 +56,4 @@ async webSocketMessage(ws: WebSocket, message: string) {
 
 - `CLOUDFLARE-BUG-REPORT.md` - Executive summary
 - `hibernation-bug-repro.md` - Technical details
-- `src/` - Working vs broken code examples
+- `src/index.ts` - Hibernation implementation that exhibits the bug
